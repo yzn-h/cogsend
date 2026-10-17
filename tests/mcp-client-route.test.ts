@@ -151,6 +151,8 @@ const expectedOutputFields: Record<string, string[]> = {
 		'linkedin',
 		'threads',
 		'x',
+		'instagram',
+		'facebook',
 		'issues'
 	],
 	publish_draft: ['results', 'stopped', 'stoppedError', 'draft'],

@@ -76,6 +76,11 @@ export interface ConnectionCredentials {
 	xUserId?: string;
 	/** X handle without @ (for permalinks) */
 	xUsername?: string;
+	/** Instagram professional account id (the publish target) and username. */
+	instagramUserId?: string;
+	instagramUsername?: string;
+	/** Facebook Page id; accessToken is that Page's own token. */
+	facebookPageId?: string;
 	/** Zernio-backed accounts: the API key and the Zernio SocialAccount id. */
 	zernioApiKey?: string;
 	zernioAccountId?: string;
@@ -91,6 +96,8 @@ export interface ConnectionMeta {
 	personUrn?: string;
 	threadsUserId?: string;
 	xUserId?: string;
+	instagramUserId?: string;
+	facebookPageId?: string;
 	provider?: 'zernio';
 	zernioAccountId?: string;
 	zernioProfileId?: string;
@@ -161,9 +168,10 @@ export const UNCONFIRMED_POST_MARK = 'may have been published';
 
 /**
  * The request that creates a post failed without an answer (timeout, dropped
- * connection), so the platform may have published it. X, LinkedIn and Threads
- * take no idempotency key, so a retry cannot be recognised as the same post:
- * retrying on its own would risk a duplicate, and the person has to look first.
+ * connection), so the platform may have published it. X, LinkedIn and the Meta
+ * platforms take no idempotency key, so a retry cannot be recognised as the
+ * same post: retrying on its own would risk a duplicate, and the person has to
+ * look first.
  * The wording avoids the words humanizedCause and the auth matchers react to,
  * so it reaches the reader as written.
  */

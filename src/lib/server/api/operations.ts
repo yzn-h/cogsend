@@ -16,9 +16,16 @@ import {
 	validateLinkedinText,
 	validateMastodonText,
 	validateThreadsText,
+	validateInstagramText,
+	validateFacebookText,
 	validateXText
 } from '#lib/domain/validation/text.js';
-import { getProvider, isPlatformId, type PlatformId } from '#lib/server/providers/index.js';
+import {
+	getProvider,
+	isPlatformId,
+	PLATFORM_IDS,
+	type PlatformId
+} from '#lib/server/providers/index.js';
 import {
 	connections,
 	drafts,
@@ -77,7 +84,7 @@ export function validatePost(input: {
 	maxCharacters?: unknown;
 }) {
 	const text = String(input.text || '');
-	// Five validators run over this: an unbounded body is free CPU for any read-only key.
+	// Seven validators run over this: an unbounded body is free CPU for any read-only key.
 	if (text.length > MAX_VALIDATE_LENGTH)
 		invalid(`text must be ${MAX_VALIDATE_LENGTH} characters or fewer`, 413);
 	const platform = input.platform as PlatformId | undefined;
@@ -86,7 +93,9 @@ export function validatePost(input: {
 		mastodon = validateMastodonText(text, maxCharacters ?? 500),
 		linkedin = validateLinkedinText(text),
 		threads = validateThreadsText(text),
-		x = validateXText(text);
+		x = validateXText(text),
+		instagram = validateInstagramText(text),
+		facebook = validateFacebookText(text);
 	const issues =
 		platform && isPlatformId(platform)
 			? getProvider(platform).validate({ text }, { maxCharacters: maxCharacters ?? 500 })
@@ -99,6 +108,8 @@ export function validatePost(input: {
 		linkedin,
 		threads,
 		x,
+		instagram,
+		facebook,
 		issues
 	};
 }
@@ -370,7 +381,7 @@ export async function rescheduleDelivery(
 const ALLOWED_MEDIA_EXTENSIONS = new Set(['jpg', 'png', 'webp', 'gif', 'mp4']);
 // 11 bound parameters per media row; D1 caps a query at 100.
 const MEDIA_INSERT_CHUNK = 8;
-const VARIANT_PLATFORMS = new Set(['mastodon', 'bluesky', 'linkedin', 'threads', 'x']);
+const VARIANT_PLATFORMS: ReadonlySet<string> = new Set(PLATFORM_IDS);
 const VISIBILITIES = new Set(['public', 'unlisted', 'private', 'direct']);
 
 export async function listDrafts(ctx: OperationContext, userId: string, requestedLimit?: number) {
@@ -645,7 +656,7 @@ export async function setDraftVariant(
 	}
 	const platform = String(fields.platform || '');
 	if (!VARIANT_PLATFORMS.has(platform))
-		invalid('platform must be mastodon, bluesky, linkedin, threads, or x');
+		invalid(`platform must be one of ${PLATFORM_IDS.join(', ')}`);
 	const existing = await first(
 		ctx.db
 			.select()

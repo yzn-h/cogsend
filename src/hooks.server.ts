@@ -54,6 +54,8 @@ export function isPublicPath(path: string): boolean {
 		path.startsWith('/api/connections/linkedin/callback') ||
 		path.startsWith('/api/connections/threads/callback') ||
 		path.startsWith('/api/connections/x/callback') ||
+		path.startsWith('/api/connections/instagram/callback') ||
+		path.startsWith('/api/connections/facebook/callback') ||
 		path.startsWith('/api/connections/zernio/callback')
 	)
 		return true;

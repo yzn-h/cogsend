@@ -7,7 +7,9 @@ export const PLATFORM_LIMITS = {
 	mastodon: 500,
 	linkedin: 3000,
 	threads: 500,
-	x: 280
+	x: 280,
+	instagram: 2200,
+	facebook: 63206
 } as const;
 
 export type LimitedPlatform = keyof typeof PLATFORM_LIMITS;
@@ -48,6 +50,10 @@ export function isOverSelectedPlatformLimit(params: {
 	threadsMax?: number;
 	xLen?: number;
 	xMax?: number;
+	instagramLen?: number;
+	instagramMax?: number;
+	facebookLen?: number;
+	facebookMax?: number;
 }): boolean {
 	const selected = new Set(params.selectedPlatforms);
 	const blueskyMax = params.blueskyMax ?? PLATFORM_LIMITS.bluesky;
@@ -55,10 +61,14 @@ export function isOverSelectedPlatformLimit(params: {
 	const linkedinMax = params.linkedinMax ?? PLATFORM_LIMITS.linkedin;
 	const threadsMax = params.threadsMax ?? PLATFORM_LIMITS.threads;
 	const xMax = params.xMax ?? PLATFORM_LIMITS.x;
+	const instagramMax = params.instagramMax ?? PLATFORM_LIMITS.instagram;
+	const facebookMax = params.facebookMax ?? PLATFORM_LIMITS.facebook;
 	if (selected.has('bluesky') && params.blueskyLen > blueskyMax) return true;
 	if (selected.has('mastodon') && params.mastodonLen > mastodonMax) return true;
 	if (selected.has('linkedin') && (params.linkedinLen ?? 0) > linkedinMax) return true;
 	if (selected.has('threads') && (params.threadsLen ?? 0) > threadsMax) return true;
 	if (selected.has('x') && (params.xLen ?? 0) > xMax) return true;
+	if (selected.has('instagram') && (params.instagramLen ?? 0) > instagramMax) return true;
+	if (selected.has('facebook') && (params.facebookLen ?? 0) > facebookMax) return true;
 	return false;
 }

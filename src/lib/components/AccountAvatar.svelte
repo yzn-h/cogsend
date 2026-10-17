@@ -38,14 +38,18 @@
 		mastodon: '#6364ff',
 		linkedin: '#0a66c2',
 		threads: '#000000',
-		x: '#000000'
+		x: '#000000',
+		instagram: '#e1306c',
+		facebook: '#0866ff'
 	};
 	const badgeLabel: Record<string, string> = {
 		bluesky: 'Bluesky',
 		mastodon: 'Mastodon',
 		linkedin: 'LinkedIn',
 		threads: 'Threads',
-		x: 'X'
+		x: 'X',
+		instagram: 'Instagram',
+		facebook: 'Facebook'
 	};
 	const bg = $derived(badgeBg[platform] ?? '#6b7280');
 	const label = $derived(badgeLabel[platform] ?? platform);

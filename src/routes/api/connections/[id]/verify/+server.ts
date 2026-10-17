@@ -7,7 +7,9 @@ import { connections } from '#lib/server/db/schema.js';
 import { fail, handleError, ok } from '#lib/server/http.js';
 import {
 	blueskyCreateSession,
+	facebookVerify,
 	getProvider,
+	instagramVerify,
 	linkedinVerify,
 	ProviderError,
 	threadsVerify,
@@ -270,6 +272,73 @@ export const POST: RequestHandler = async ({ params, locals }) => {
 					updatedAt: new Date()
 				})
 				.where(owned);
+		} else if (conn.platform === 'instagram') {
+			let checkCreds = creds;
+			const refresher = getProvider('instagram').refreshIfNeeded;
+			if (refresher) {
+				try {
+					const refreshed = await refresher(creds);
+					if (refreshed.accessToken && refreshed.accessToken !== creds.accessToken) {
+						checkCreds = refreshed;
+						await locals.db
+							.update(connections)
+							.set({
+								credentialsEncrypted: await encryptJson(refreshed, locals.env.APP_ENCRYPTION_KEY),
+								updatedAt: new Date()
+							})
+							.where(owned);
+					}
+				} catch (err) {
+					if ((err as { status?: number } | null)?.status === 401) {
+						await locals.db
+							.update(connections)
+							.set({ status: 'expired', updatedAt: new Date() })
+							.where(owned);
+						return fail('Token expired — reconnect', 401);
+					}
+				}
+			}
+			const info = await instagramVerify(checkCreds);
+			const username = info.handle?.replace(/^@/, '');
+			const credsPatch = {
+				...(username && username !== checkCreds.instagramUsername
+					? { instagramUsername: username }
+					: {}),
+				...(info.userId && info.userId !== checkCreds.instagramUserId
+					? { instagramUserId: info.userId }
+					: {})
+			};
+			await locals.db
+				.update(connections)
+				.set({
+					status: 'active',
+					displayName: info.displayName || conn.displayName,
+					avatarUrl: info.avatarUrl || conn.avatarUrl,
+					handle: info.handle || conn.handle,
+					...(Object.keys(credsPatch).length
+						? {
+								credentialsEncrypted: await encryptJson(
+									{ ...checkCreds, ...credsPatch },
+									locals.env.APP_ENCRYPTION_KEY
+								)
+							}
+						: {}),
+					updatedAt: new Date()
+				})
+				.where(owned);
+		} else if (conn.platform === 'facebook') {
+			// Page tokens do not expire on a clock, so there is nothing to refresh.
+			const info = await facebookVerify(creds);
+			await locals.db
+				.update(connections)
+				.set({
+					status: 'active',
+					displayName: info.displayName || conn.displayName,
+					avatarUrl: info.avatarUrl || conn.avatarUrl,
+					handle: info.handle || conn.handle,
+					updatedAt: new Date()
+				})
+				.where(owned);
 		} else if (conn.platform === 'mastodon' && creds.instanceUrl && creds.accessToken) {
 			// Re-normalizes and re-blocks the stored instance (fail closed on a
 			// poisoned row) and re-checks every redirect hop, like publishing does.
@@ -303,7 +372,10 @@ export const POST: RequestHandler = async ({ params, locals }) => {
 		// bad stored instance) keep their status so a blip cannot flap a
 		// healthy connection to `expired`.
 		const status = (err as { status?: number } | null)?.status;
-		if (status === 401 || status === 403) {
+		// Meta reports a dead token as HTTP 400 with code 190, which the
+		// provider has already classified.
+		const metaAuth = err instanceof ProviderError && err.code === 'auth';
+		if (status === 401 || status === 403 || metaAuth) {
 			await locals.db
 				.update(connections)
 				.set({ status: 'expired', updatedAt: new Date() })

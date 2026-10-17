@@ -124,12 +124,14 @@ The Cloudflare account is new and has never picked its workers.dev subdomain; ad
 
 ## A post failed with "may have been published"
 
-CogSend sent the post to X, LinkedIn or Threads, but no answer came back in time,
-so it cannot tell whether the platform published it. Those platforms take no id
-that would let a second attempt be recognised as the same post, so CogSend does
-not retry on its own: a blind retry could post it twice. Open the account on the
-platform. If the post is there, press **Discard** next to that account in
-**Posts → Failed**; if it is not, press **Retry**.
+CogSend sent the post to X, LinkedIn, Threads, Instagram or Facebook, but no
+answer came back in time, so it cannot tell whether the platform published it.
+Those platforms take no id that would let a second attempt be recognised as the
+same post, so CogSend does not retry on its own: a blind retry could post it
+twice. Open the account on the platform. If the post is there, press **Discard**
+next to that account in **Posts → Failed**; if it is not, press **Retry**.
+Instagram is the safer case: a retry first asks Instagram whether the upload it
+already made was published, and stops there if it was.
 
 ## The update from Settings stops
 

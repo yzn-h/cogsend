@@ -78,7 +78,8 @@ export function removeSegment(segments: string[], index: number): string[] {
 	return segments.filter((_, i) => i !== index);
 }
 
-export type PreviewPlatform = 'mastodon' | 'bluesky' | 'linkedin' | 'threads' | 'x' | 'generic';
+export type PreviewPlatform =
+	'mastodon' | 'bluesky' | 'linkedin' | 'threads' | 'x' | 'instagram' | 'facebook' | 'generic';
 
 export type PreviewIdentity = {
 	platform: PreviewPlatform;
@@ -99,18 +100,22 @@ const FALLBACK_HANDLES: Record<string, string> = {
 	bluesky: 'you.bsky.social',
 	linkedin: 'you',
 	threads: '@you',
-	x: '@you'
+	x: '@you',
+	instagram: '@you',
+	facebook: 'Your Page'
 };
 
 const PREVIEW_LIMITS: Record<string, { max: number; mode: 'grapheme' | 'mastodon-weighted' }> = {
 	bluesky: { max: 300, mode: 'grapheme' },
 	linkedin: { max: 3000, mode: 'grapheme' },
 	threads: { max: 500, mode: 'grapheme' },
-	x: { max: 280, mode: 'grapheme' }
+	x: { max: 280, mode: 'grapheme' },
+	instagram: { max: 2200, mode: 'grapheme' },
+	facebook: { max: 63206, mode: 'grapheme' }
 };
 
 export function buildPreviewModel(opts: {
-	platform: 'main' | 'mastodon' | 'bluesky' | 'linkedin' | 'threads' | 'x';
+	platform: 'main' | Exclude<PreviewPlatform, 'generic'>;
 	body: string;
 	connections: Array<{
 		platform: string;

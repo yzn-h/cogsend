@@ -16,11 +16,13 @@
 		isOAuthPlatform,
 		missingSecrets,
 		needsSetup,
+		oauthPlatformRecord,
 		platformSecretNames,
 		secretsPutCommandFor,
 		secretLabel,
 		setupGuideUrl,
-		type OAuthPlatformId
+		type OAuthPlatformId,
+		type PlatformConfigured
 	} from '#lib/domain/platform-setup.js';
 	import { buildAgentPrompt } from '#lib/domain/agent-prompt.js';
 	import { sessionExpiredIfUnauthorized } from '#lib/components/session-expired.js';
@@ -65,13 +67,7 @@
 		)
 	);
 	// svelte-ignore state_referenced_locally
-	let configured = $state<{ linkedin: boolean; threads: boolean; x: boolean }>(
-		data.configured ?? {
-			linkedin: true,
-			threads: true,
-			x: true
-		}
-	);
+	let configured = $state<PlatformConfigured>(data.configured ?? oauthPlatformRecord(true));
 	// Per-secret presence from the API. The panel names the missing half of a
 	// half-configured platform instead of repeating "no credentials yet" for a
 	// client id that is already uploaded.
@@ -81,11 +77,11 @@
 	// form in the setup panel. Only the form's own can be changed from here.
 	// svelte-ignore state_referenced_locally
 	let credentialSources = $state<Record<OAuthPlatformId, 'env' | 'app' | null>>(
-		data.sources ?? { linkedin: null, threads: null, x: null }
+		data.sources ?? oauthPlatformRecord(null)
 	);
 	// svelte-ignore state_referenced_locally
 	let savedClientIds = $state<Record<OAuthPlatformId, string | null>>(
-		data.savedClientIds ?? { linkedin: null, threads: null, x: null }
+		data.savedClientIds ?? oauthPlatformRecord(null)
 	);
 	let appForm = $state<Record<string, string>>({});
 	let appFormBusy = $state(false);
@@ -145,6 +141,18 @@
 			form: null
 		},
 		{
+			id: 'instagram',
+			name: 'Instagram',
+			description: 'Connect a Business or Creator account',
+			form: null
+		},
+		{
+			id: 'facebook',
+			name: 'Facebook',
+			description: 'Connect one or more Pages you manage',
+			form: null
+		},
+		{
 			id: 'mastodon',
 			name: 'Mastodon',
 			description: 'Connect via your instance',
@@ -183,7 +191,9 @@
 				configured = {
 					linkedin: payload.configured.linkedin !== false,
 					threads: payload.configured.threads !== false,
-					x: payload.configured.x !== false
+					x: payload.configured.x !== false,
+					instagram: payload.configured.instagram !== false,
+					facebook: payload.configured.facebook !== false
 				};
 			}
 			if (payload.secrets && typeof payload.secrets === 'object') {
@@ -228,7 +238,7 @@
 	}
 
 	async function connectOAuth(
-		platform: 'mastodon' | 'linkedin' | 'threads' | 'x',
+		platform: 'mastodon' | OAuthPlatformId,
 		body: Record<string, string>
 	) {
 		loading = true;
@@ -342,7 +352,7 @@
 		openConnectDialog();
 		modalForm = 'zernio';
 		zernioAccounts = null;
-		if (platform) zernioConnectPlatform = platform;
+		if (platform && isZernioPlatform(platform)) zernioConnectPlatform = platform;
 		if (zernioHasStoredKey) void loadZernioAccounts();
 	}
 
@@ -514,11 +524,7 @@
 			void connectOAuth('mastodon', { instanceUrl: account.instanceUrl });
 			return;
 		}
-		if (
-			account.platform === 'linkedin' ||
-			account.platform === 'threads' ||
-			account.platform === 'x'
-		) {
+		if (isOAuthPlatform(account.platform)) {
 			if (needsSetup(account.platform, configured)) {
 				showSetupPanel(account.platform);
 				return;
@@ -966,19 +972,21 @@
 							class="inline-block text-[13px] font-bold text-stone-900 underline"
 							>Full {platformName(setupPanel)} steps</a
 						>
-						<p
-							class="rounded-xl border border-dashed border-stone-300 px-3 py-2.5 text-xs font-medium text-stone-600"
-							data-testid="setup-zernio-callout"
-						>
-							Don't want to set up an app?
-							<button
-								type="button"
-								onclick={() => openZernioForm(setupPanel ?? undefined)}
-								class="font-bold text-stone-900 underline"
-								>Connect {platformName(setupPanel)} through Zernio</button
+						{#if isZernioPlatform(setupPanel)}
+							<p
+								class="rounded-xl border border-dashed border-stone-300 px-3 py-2.5 text-xs font-medium text-stone-600"
+								data-testid="setup-zernio-callout"
 							>
-							instead.{setupPanel === 'x' ? '' : ' Free plan available.'}
-						</p>
+								Don't want to set up an app?
+								<button
+									type="button"
+									onclick={() => openZernioForm(setupPanel ?? undefined)}
+									class="font-bold text-stone-900 underline"
+									>Connect {platformName(setupPanel)} through Zernio</button
+								>
+								instead.{setupPanel === 'x' ? '' : ' Free plan available.'}
+							</p>
+						{/if}
 					</div>
 				{/key}
 			{:else if modalForm === 'none'}

@@ -31,6 +31,8 @@ describe('platforms', () => {
 	it('preview priority covers every platform exactly once', () => {
 		expect([...PREVIEW_PRIORITY].sort()).toEqual([
 			'bluesky',
+			'facebook',
+			'instagram',
 			'linkedin',
 			'mastodon',
 			'threads',
@@ -38,10 +40,19 @@ describe('platforms', () => {
 		]);
 	});
 
-	it('orders X first, then threads, linkedin, mastodon, bluesky', () => {
-		expect([...PLATFORM_ORDER]).toEqual(['x', 'threads', 'linkedin', 'mastodon', 'bluesky']);
+	it('orders X first, then threads, linkedin, mastodon, bluesky, instagram, facebook', () => {
+		expect([...PLATFORM_ORDER]).toEqual([
+			'x',
+			'threads',
+			'linkedin',
+			'mastodon',
+			'bluesky',
+			'instagram',
+			'facebook'
+		]);
 		expect(platformRank('x')).toBe(0);
 		expect(platformRank('bluesky')).toBe(4);
+		expect(platformRank('facebook')).toBe(6);
 		expect(platformRank('unknown')).toBe(99);
 	});
 });

@@ -13,9 +13,9 @@ These two connect with what you already have:
   Bluesky under Settings → Privacy and security → App passwords. Never use your
   main password.
 
-## LinkedIn, Threads and X
+## LinkedIn, Threads, Instagram, Facebook and X
 
-These three need a developer app of your own before they can connect, because the
+These need a developer app of your own before they can connect, because the
 platform issues the client id and secret the Worker uses. Until one is set up, the
 picker shows the platform with a **Needs setup** badge, and choosing it shows that
 platform's steps — the redirect URI to register and the Worker secrets to set —
@@ -24,8 +24,13 @@ instead of a connect attempt that cannot succeed. The full steps are in
 
 Once the secrets are on the Worker, reload the page and connect as usual.
 
-If you would rather not set up an app, you can connect these through
-[Zernio](zernio.md) instead.
+If you would rather not set up an app, you can connect LinkedIn, Threads and X
+through [Zernio](zernio.md) instead.
+
+Facebook connects Pages, not profiles: every Page you tick in Facebook's dialog
+becomes its own account here, and connecting again with more Pages ticked adds
+them. Instagram connects one Business or Creator account per authorisation; to
+add a second, sign in to Instagram as that account and connect again.
 
 ## When an account needs reconnecting
 

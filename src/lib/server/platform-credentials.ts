@@ -1,6 +1,6 @@
 /**
- * OAuth app credentials for LinkedIn, Threads and X, from either of two places:
- * Worker secrets, or the form in the accounts dialog, which stores them in D1
+ * OAuth app credentials for the platforms in PLATFORM_SETUP, from either of
+ * two places: Worker secrets, or the form in the accounts dialog, which stores them in D1
  * encrypted with APP_ENCRYPTION_KEY (the same protection as the account tokens
  * they lead to).
  *

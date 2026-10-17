@@ -1,4 +1,5 @@
 import type { PageServerLoad } from './$types';
+import { oauthPlatformRecord } from '#lib/domain/platform-setup.js';
 import { listConnections } from '#lib/server/connection-list.js';
 import { requireUser } from '#lib/server/require.js';
 
@@ -15,10 +16,10 @@ export const load: PageServerLoad = async ({ locals }) => {
 		console.error('[accounts] list failed', err);
 		return {
 			connections: [],
-			configured: { linkedin: false, threads: false, x: false },
+			configured: oauthPlatformRecord(false),
 			secrets: {},
-			sources: { linkedin: null, threads: null, x: null },
-			savedClientIds: { linkedin: null, threads: null, x: null },
+			sources: oauthPlatformRecord(null),
+			savedClientIds: oauthPlatformRecord(null),
 			appUrl: locals.env.APP_URL,
 			loadFailed: true
 		};

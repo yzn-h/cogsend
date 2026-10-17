@@ -1,15 +1,15 @@
 import { platformName } from '#lib/domain/platforms.js';
 
 /**
- * The three platforms whose client credentials belong to whoever runs the
- * deployment: LinkedIn issues them to an app owner, Meta to a Threads app, X to
- * a developer project. Only that person can create them, so a deployment
+ * The platforms whose client credentials belong to whoever runs the
+ * deployment: LinkedIn issues them to an app owner, Meta to a Threads,
+ * Instagram or Facebook app, X to a developer project. Only that person can create them, so a deployment
  * without them cannot connect the account at all.
  *
  * Mastodon is absent on purpose — it registers its app on the instance itself —
  * and Bluesky takes an app password, so both are self-serve.
  */
-export type OAuthPlatformId = 'linkedin' | 'threads' | 'x';
+export type OAuthPlatformId = 'linkedin' | 'threads' | 'x' | 'instagram' | 'facebook';
 
 export type PlatformSetup = {
 	/** Worker secrets the connect route requires: it answers "not enabled"
@@ -72,14 +72,49 @@ export const PLATFORM_SETUP: Record<OAuthPlatformId, PlatformSetup> = {
 		redirectField: 'User authentication settings → Callback URI / Redirect URL',
 		docsAnchor: 'x',
 		note: 'Posting uses pay-per-use API credits. X_CLIENT_SECRET is only needed for a confidential Web App client.'
+	},
+	instagram: {
+		// The Instagram app ID and secret from the use case's "API setup with
+		// Instagram login" page, not the Meta app's own ID: the two differ, and
+		// the Meta one fails the authorize step.
+		secrets: ['INSTAGRAM_APP_ID', 'INSTAGRAM_APP_SECRET'],
+		callbackPath: '/api/connections/instagram/callback',
+		consoleUrl: 'https://developers.facebook.com/apps/',
+		consoleName: 'Meta for Developers',
+		consoleRequirement:
+			'Create the app with the Manage messaging & content on Instagram use case, use its Instagram app ID and secret, and while the app is in development add your Instagram professional account as an Instagram tester and accept the invite.',
+		redirectField:
+			'API setup with Instagram login → Set up Instagram business login → Business login settings → OAuth redirect URIs',
+		docsAnchor: 'instagram',
+		note: 'Only Business and Creator accounts can publish through the API.'
+	},
+	facebook: {
+		secrets: ['FACEBOOK_APP_ID', 'FACEBOOK_APP_SECRET'],
+		callbackPath: '/api/connections/facebook/callback',
+		consoleUrl: 'https://developers.facebook.com/apps/',
+		consoleName: 'Meta for Developers',
+		consoleRequirement:
+			'Create the app with the Manage everything on your Page use case, and while the app is in development give the people who connect a role on the app (App roles → Roles).',
+		redirectField: 'the use case’s Facebook Login settings → Valid OAuth Redirect URIs',
+		docsAnchor: 'facebook',
+		note: 'Every Page you pick in the Facebook dialog becomes its own account here.'
 	}
 };
 
 export type PlatformConfigured = Record<OAuthPlatformId, boolean>;
 
+/** The same value for every OAuth platform: the fallbacks a page renders
+ *  before (or without) the server's answer. */
+export function oauthPlatformRecord<T>(value: T): Record<OAuthPlatformId, T> {
+	return Object.fromEntries(Object.keys(PLATFORM_SETUP).map((id) => [id, value])) as Record<
+		OAuthPlatformId,
+		T
+	>;
+}
+
 const SETUP_GUIDE_BASE = 'https://github.com/cogsend/cogsend/blob/main/docs/oauth-apps.md';
 
-/** Setup guide for the three platforms above, in the repository's docs. */
+/** Setup guide for the platforms above, in the repository's docs. */
 export const SETUP_GUIDE_URL = `${SETUP_GUIDE_BASE}#oauth-app-setup`;
 
 /** That platform's own section of the guide: what the dialog links to, so a
@@ -166,7 +201,15 @@ export function callbackUri(id: OAuthPlatformId, appUrl: string): string {
  * Self-serve platforms first, then the ones that may need server setup — the
  * order the accounts empty state lists them in.
  */
-const CONNECT_ORDER = ['bluesky', 'mastodon', 'linkedin', 'threads', 'x'] as const;
+const CONNECT_ORDER = [
+	'bluesky',
+	'mastodon',
+	'linkedin',
+	'threads',
+	'instagram',
+	'facebook',
+	'x'
+] as const;
 
 /** "Bluesky", "Bluesky or Mastodon", "Bluesky, Mastodon, or LinkedIn". */
 export function joinPlatformNames(names: readonly string[]): string {

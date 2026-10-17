@@ -308,6 +308,18 @@ export function publishCallEstimate(platform: string, content: NormalizedPost): 
 			platformCalls += segments.length * 4 + images.length * 3 + 4;
 			storage = 0;
 			break;
+		case 'instagram':
+			// A container and its status polls per carousel item, the parent
+			// container and its polls, the publish and the permalink lookup.
+			platformCalls += media.length * 3 + 8;
+			storage = 0;
+			break;
+		case 'facebook':
+			// One upload per photo (plus the feed post for several), or one
+			// video call, and the permalink lookup.
+			platformCalls += media.length + 2;
+			storage = 0;
+			break;
 		case 'zernio':
 			// One create and the status polls; media travels as URLs, so there
 			// are no uploads and no storage reads.

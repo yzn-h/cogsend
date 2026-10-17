@@ -7,7 +7,9 @@ export const PLATFORM_COLOR: Record<string, string> = {
 	bluesky: 'text-sky-500',
 	linkedin: 'text-blue-600',
 	threads: 'text-stone-900',
-	x: 'text-stone-900'
+	x: 'text-stone-900',
+	instagram: 'text-pink-600',
+	facebook: 'text-blue-600'
 };
 
 export function platformColorClass(platform: string): string {

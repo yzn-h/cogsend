@@ -38,6 +38,8 @@
 		X_MAX_IMAGE_BYTES,
 		groupMediaBySegment,
 		mediaSizeProblem,
+		metaMediaProblem,
+		VIDEO_PLATFORMS,
 		remapSegmentIndexAfterRemoval
 	} from '#lib/domain/media-limits.js';
 	import { shrinkToFit } from '#lib/components/shrink-image.js';
@@ -571,6 +573,10 @@
 		const threadsText = effectivePlatformBody(baseBody, overrides, 'threads');
 		const xText = effectivePlatformBody(baseBody, overrides, 'x');
 		const linkedinFlat = flattenThreadBody(linkedinText);
+		const instagramFlat = flattenThreadBody(
+			effectivePlatformBody(baseBody, overrides, 'instagram')
+		);
+		const facebookFlat = flattenThreadBody(effectivePlatformBody(baseBody, overrides, 'facebook'));
 		return {
 			bluesky: {
 				len: maxThreadSegmentLength(bskyText, countGraphemes),
@@ -585,7 +591,9 @@
 				len: maxThreadSegmentLength(threadsText, countGraphemes),
 				max: PLATFORM_LIMITS.threads
 			},
-			x: { len: maxThreadSegmentLength(xText, xWeightedLength), max: PLATFORM_LIMITS.x }
+			x: { len: maxThreadSegmentLength(xText, xWeightedLength), max: PLATFORM_LIMITS.x },
+			instagram: { len: countGraphemes(instagramFlat), max: PLATFORM_LIMITS.instagram },
+			facebook: { len: countGraphemes(facebookFlat), max: PLATFORM_LIMITS.facebook }
 		};
 	});
 	const blueskyBytesOver = $derived.by(() => {
@@ -619,6 +627,7 @@
 		return null;
 	});
 	const linkedinMediaOver = $derived(linkedinMediaProblem !== null);
+	const metaMediaIssue = $derived(metaMediaProblem(selectedPlatforms, media));
 	const overSelectedLimit = $derived(
 		isOverSelectedPlatformLimit({
 			selectedPlatforms,
@@ -631,7 +640,11 @@
 			threadsLen: counters.threads.len,
 			threadsMax: counters.threads.max,
 			xLen: counters.x.len,
-			xMax: counters.x.max
+			xMax: counters.x.max,
+			instagramLen: counters.instagram.len,
+			instagramMax: counters.instagram.max,
+			facebookLen: counters.facebook.len,
+			facebookMax: counters.facebook.max
 		}) ||
 			threadsLinksOver ||
 			linkedinMediaOver ||
@@ -1278,6 +1291,14 @@
 		}
 		if (linkedinMediaOver && connectionIds.some((id) => platformOf(id) === 'linkedin')) {
 			showToast(linkedinMediaProblem ?? 'LinkedIn cannot take this media', 'warn');
+			return;
+		}
+		const metaProblem = metaMediaProblem(
+			connectionIds.map(platformOf).filter((p) => p !== undefined),
+			media
+		);
+		if (metaProblem) {
+			showToast(metaProblem, 'warn');
 			return;
 		}
 		const sizeProblem = mediaSizeProblem(
@@ -1930,6 +1951,10 @@
 			showToast(linkedinMediaProblem ?? 'LinkedIn cannot take this media', 'warn');
 			return;
 		}
+		if (metaMediaIssue) {
+			showToast(metaMediaIssue, 'warn');
+			return;
+		}
 		const sizeProblem = mediaSizeProblem(selectedPlatforms, media);
 		if (sizeProblem) {
 			showToast(sizeProblem, 'warn');
@@ -2014,21 +2039,34 @@
 		const threadsSelected = connections.some((c) => selected.has(c.id) && c.platform === 'threads');
 		const xSelected = connections.some((c) => selected.has(c.id) && c.platform === 'x');
 		const videos = images.filter((f) => f.type === 'video/mp4');
-		const nonLinkedinSelected = connections.some(
-			(c) => selected.has(c.id) && c.platform !== 'linkedin'
+		const nonVideoSelected = connections.some(
+			(c) => selected.has(c.id) && !VIDEO_PLATFORMS.has(c.platform)
 		);
-		const linkedinOnly = connections.some((c) => selected.has(c.id) && c.platform === 'linkedin');
+		const videoTargetSelected = connections.some(
+			(c) => selected.has(c.id) && VIDEO_PLATFORMS.has(c.platform)
+		);
+		const instagramSelected = connections.some(
+			(c) => selected.has(c.id) && c.platform === 'instagram'
+		);
 		const webpSelected = images.some((f) => f.type === 'image/webp') && linkedinSelected;
 		const overBluesky = images.filter((f) => f.size > BLUESKY_MAX_IMAGE_BYTES);
 		const overLinkedin = images.filter((f) => f.size > LINKEDIN_MAX_IMAGE_BYTES);
 		const advisories: string[] = [];
-		if (videos.length && nonLinkedinSelected) {
+		if (videos.length && nonVideoSelected) {
 			advisories.push(
-				'Video posts only go to LinkedIn — other selected accounts will fail unless you uncheck them.'
+				'Video posts only go to LinkedIn, Instagram and Facebook — other selected accounts will fail unless you uncheck them.'
 			);
 		}
-		if (videos.length && !linkedinOnly) {
-			advisories.push('Select a LinkedIn account or the video has nowhere to go.');
+		if (videos.length && !videoTargetSelected) {
+			advisories.push(
+				'Select a LinkedIn, Instagram or Facebook account or the video has nowhere to go.'
+			);
+		}
+		if (
+			instagramSelected &&
+			images.some((f) => f.type !== 'image/jpeg' && f.type !== 'video/mp4')
+		) {
+			advisories.push('Instagram takes JPEG images only — convert it or uncheck Instagram.');
 		}
 		if (overBluesky.length && blueskySelected) {
 			advisories.push(
@@ -2067,13 +2105,15 @@
 				f.type === 'image/gif' ? f.size > X_MAX_GIF_BYTES : f.size > X_MAX_IMAGE_BYTES
 			);
 		if (xBadType) {
-			advisories.push('X takes JPEG/PNG/GIF/WebP images only — video goes to LinkedIn.');
+			advisories.push('X takes JPEG/PNG/GIF/WebP images only.');
 		}
 		if (xOversize) {
 			advisories.push("An image is over X's 5MB cap (15MB for GIFs) — compress it or uncheck X.");
 		}
 		if (videos.length && xSelected) {
-			advisories.push('Video posts only go to LinkedIn — X accounts will fail unless unchecked.');
+			advisories.push(
+				'Video posts only go to LinkedIn, Instagram and Facebook — X accounts will fail unless unchecked.'
+			);
 		}
 		if (advisories.length) showToast(advisories[0], 'warn');
 		uploadingSegment = segmentIndex;

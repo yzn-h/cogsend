@@ -374,6 +374,10 @@ export function categorizeFailure(
 	// not support threads" must not be read as a Threads failure. Message text
 	// only stands in when the row outlived its connection.
 	const isThreads = platform === 'threads' || (!platform && s.includes('threads'));
+	const isOtherMeta =
+		platform === 'instagram' ||
+		platform === 'facebook' ||
+		(!platform && (s.includes('instagram') || s.includes('facebook')));
 	const isLinkedIn = platform === 'linkedin' || (!platform && s.includes('linkedin'));
 
 	if (isThreads) {
@@ -382,6 +386,11 @@ export function categorizeFailure(
 		if (s.includes('429') || s.includes('rate limit')) return 'Threads rate limit';
 		if (s.includes('does not support') || s.includes('not supported'))
 			return 'Threads unsupported content';
+	}
+	if (isOtherMeta) {
+		if (isThreadsMediaFetchFailure(raw)) return `${name} media timeout`;
+		if (isThreadsAuthFailure(raw)) return `${name} permission`;
+		if (s.includes('still processing')) return `${name} media processing`;
 	}
 	if (isLinkedIn) {
 		if (s.includes('does not support threads') || s.includes('single post'))

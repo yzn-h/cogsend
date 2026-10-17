@@ -40,7 +40,8 @@ APP_ENCRYPTION_KEY=
 
 # Optional. Scripts send: Authorization: Bearer $API_TOKEN (min 16 chars)
 # API_TOKEN=
-# Optional. Enables the LinkedIn / Threads / X connect buttons (OAuth apps).
+# Optional. Enables the LinkedIn / Threads / Instagram / Facebook / X connect
+# buttons (OAuth apps).
 # The accounts dialog can store these instead; a value set here wins.
 # LINKEDIN_CLIENT_ID=
 # LINKEDIN_CLIENT_SECRET=
@@ -48,14 +49,19 @@ APP_ENCRYPTION_KEY=
 # THREADS_APP_SECRET=
 # X_CLIENT_ID=
 # X_CLIENT_SECRET=
+# INSTAGRAM_APP_ID=
+# INSTAGRAM_APP_SECRET=
+# FACEBOOK_APP_ID=
+# FACEBOOK_APP_SECRET=
 # Optional. Local dev only: skip the 2FA enrollment/verify flow. Honored only
 # when the instance resolves to a localhost URL — never on a real host.
 # Set to 1 to enable.
 # SKIP_TOTP=1
-# Optional. Enables video uploads (LinkedIn only: one MP4 per post, no images
-# mixed in). The upload path is wired but has not been verified end to end
-# against LinkedIn's live API, so it is off unless you set this. The file
-# picker hides video while it is off, and the API refuses video files.
+# Optional. Enables video uploads (LinkedIn, Instagram Reels and carousels,
+# Facebook Pages: one MP4 per post, no images mixed in). The upload paths are
+# wired but have not been verified end to end against the live APIs, so it is
+# off unless you set this. The file picker hides video while it is off, and the
+# API refuses video files.
 # ENABLE_VIDEO_UPLOAD=1
 # Optional. Calls one request may make (D1 statements, R2 operations, platform
 # requests). Unset means the Workers Free plan's 50, and the scheduler publishes

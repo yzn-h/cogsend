@@ -1,5 +1,7 @@
 import { isZernioConnection } from '#lib/domain/zernio.js';
 import { blueskyProvider } from './bluesky';
+import { facebookProvider } from './facebook';
+import { instagramProvider } from './instagram';
 import { linkedinProvider } from './linkedin';
 import { mastodonProvider } from './mastodon';
 import { threadsProvider } from './threads';
@@ -12,7 +14,9 @@ const providers: Record<PlatformId, PlatformProvider> = {
 	mastodon: mastodonProvider,
 	linkedin: linkedinProvider,
 	threads: threadsProvider,
-	x: xProvider
+	x: xProvider,
+	instagram: instagramProvider,
+	facebook: facebookProvider
 };
 
 export function getProvider(platform: PlatformId | string): PlatformProvider {
@@ -63,6 +67,21 @@ export {
 	threadsVerify,
 	THREADS_MAX_CHARS
 } from './threads';
+export {
+	instagramProvider,
+	instagramAuthorizeUrl,
+	instagramExchangeCode,
+	instagramVerify,
+	INSTAGRAM_MAX_CHARS
+} from './instagram';
+export {
+	facebookProvider,
+	facebookAuthorizeUrl,
+	facebookExchangeCode,
+	facebookVerify,
+	FACEBOOK_MAX_CHARS,
+	type FacebookPage
+} from './facebook';
 export {
 	xProvider,
 	xAuthorizeUrl,

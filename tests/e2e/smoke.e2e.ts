@@ -184,7 +184,7 @@ test('schedule panel requires accounts and outbox loads', async () => {
 });
 
 /**
- * The three OAuth platforms need app credentials only the deployment owner can
+ * The OAuth platforms need app credentials only the deployment owner can
  * create, so a fresh install has none. The dialog must then say what a platform
  * needs — for that platform, when it is picked — instead of offering a connect
  * button whose request can only come back "not configured".
@@ -209,6 +209,18 @@ const OAUTH_SETUP = [
 		name: 'X',
 		secrets: ['X_CLIENT_ID', 'X_CLIENT_SECRET'],
 		command: 'npm run secrets:put X_CLIENT_ID X_CLIENT_SECRET'
+	},
+	{
+		id: 'instagram',
+		name: 'Instagram',
+		secrets: ['INSTAGRAM_APP_ID', 'INSTAGRAM_APP_SECRET'],
+		command: 'npm run secrets:put INSTAGRAM_APP_ID INSTAGRAM_APP_SECRET'
+	},
+	{
+		id: 'facebook',
+		name: 'Facebook',
+		secrets: ['FACEBOOK_APP_ID', 'FACEBOOK_APP_SECRET'],
+		command: 'npm run secrets:put FACEBOOK_APP_ID FACEBOOK_APP_SECRET'
 	}
 ] as const;
 

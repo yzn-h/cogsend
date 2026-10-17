@@ -11,10 +11,17 @@ export const LINKEDIN_MAX_IMAGES = 4;
 export const X_MAX_IMAGE_BYTES = 5_000_000;
 export const X_MAX_GIF_BYTES = 15_000_000;
 export const THREADS_MAX_IMAGE_BYTES = 8_000_000;
+export const INSTAGRAM_MAX_IMAGE_BYTES = 8_000_000;
+// Instagram's carousel cap. Instagram has no threads, so the composer's
+// per-segment cap still applies and a longer carousel spans several segments.
+export const INSTAGRAM_MAX_ITEMS = 10;
+// The Page photos endpoint refuses anything over 4MB.
+export const FACEBOOK_MAX_IMAGE_BYTES = 4_000_000;
+export const FACEBOOK_MAX_IMAGES = 10;
 export const MAX_IMAGES_PER_SEGMENT = 4;
 
-// LinkedIn video posts: single mp4 per post. 95MB keeps uploads under the
-// Worker request body limit.
+// One mp4 per composer segment (LinkedIn, Instagram, Facebook). 95MB keeps
+// uploads under the Worker request body limit.
 export const MAX_VIDEO_BYTES = 95_000_000;
 
 function looksLikeMp4(bytes: Uint8Array): boolean {
@@ -118,12 +125,21 @@ export function validateImageUpload(input: {
 	return { ok: true, mime };
 }
 
-const PLATFORM_LABEL = { bluesky: 'Bluesky', linkedin: 'LinkedIn', threads: 'Threads', x: 'X' };
+const PLATFORM_LABEL = {
+	bluesky: 'Bluesky',
+	linkedin: 'LinkedIn',
+	threads: 'Threads',
+	x: 'X',
+	instagram: 'Instagram',
+	facebook: 'Facebook'
+};
 
 function imageCap(platform: string, mime: string): number | null {
 	if (platform === 'bluesky') return BLUESKY_MAX_IMAGE_BYTES;
 	if (platform === 'linkedin') return LINKEDIN_MAX_IMAGE_BYTES;
 	if (platform === 'threads') return THREADS_MAX_IMAGE_BYTES;
+	if (platform === 'instagram') return INSTAGRAM_MAX_IMAGE_BYTES;
+	if (platform === 'facebook') return FACEBOOK_MAX_IMAGE_BYTES;
 	if (platform === 'x') return mime === 'image/gif' ? X_MAX_GIF_BYTES : X_MAX_IMAGE_BYTES;
 	return null;
 }
@@ -148,6 +164,46 @@ export function mediaSizeProblem(
 				const mb = cap / 1_000_000;
 				return `An image is over ${label}'s ${mb}MB limit — remove it or uncheck ${label}`;
 			}
+		}
+	}
+	return null;
+}
+
+/** Platforms whose providers publish MP4 video. */
+export const VIDEO_PLATFORMS: ReadonlySet<string> = new Set(['linkedin', 'instagram', 'facebook']);
+
+const isVideoMime = (mime: string) => (mime || '').toLowerCase().startsWith('video/');
+
+/**
+ * Instagram and Facebook flatten a thread into one post (as LinkedIn does), so
+ * their media rules apply to every attachment on the draft together. The first
+ * problem for a selected platform, or null; the providers refuse the same
+ * media at publish time.
+ */
+export function metaMediaProblem(
+	platforms: Iterable<string>,
+	media: { mime: string }[]
+): string | null {
+	const selected = new Set(platforms);
+	const videos = media.filter((m) => isVideoMime(m.mime));
+	const images = media.filter((m) => !isVideoMime(m.mime));
+	if (selected.has('instagram')) {
+		if (!media.length) return 'Instagram posts need an image or a video';
+		if (media.length > INSTAGRAM_MAX_ITEMS) {
+			return `Instagram combines the thread into one post — max ${INSTAGRAM_MAX_ITEMS} images or videos (${media.length} attached)`;
+		}
+		if (images.some((m) => m.mime.toLowerCase() !== 'image/jpeg')) {
+			return 'Instagram takes JPEG images only — convert the image or uncheck Instagram';
+		}
+	}
+	if (selected.has('facebook')) {
+		if (videos.length > 1) return 'Facebook allows one video per post';
+		if (videos.length && images.length) return 'Facebook video posts cannot include images';
+		if (images.length > FACEBOOK_MAX_IMAGES) {
+			return `Facebook combines the thread into one post — max ${FACEBOOK_MAX_IMAGES} photos (${images.length} attached)`;
+		}
+		if (images.some((m) => m.mime.toLowerCase() === 'image/webp')) {
+			return 'WebP images are rejected by Facebook — use JPEG, PNG, or GIF, or uncheck Facebook';
 		}
 	}
 	return null;

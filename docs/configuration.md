@@ -28,9 +28,11 @@ cannot reach anything except the tick (see [Scheduling](scheduling.md)).
 | `LINKEDIN_CLIENT_ID` / `LINKEDIN_CLIENT_SECRET` | LinkedIn ([OAuth apps](oauth-apps.md))                        |
 | `THREADS_APP_ID` / `THREADS_APP_SECRET`         | Threads                                                       |
 | `X_CLIENT_ID` / `X_CLIENT_SECRET`               | X                                                             |
+| `INSTAGRAM_APP_ID` / `INSTAGRAM_APP_SECRET`     | Instagram ([Meta apps](meta-apps.md))                         |
+| `FACEBOOK_APP_ID` / `FACEBOOK_APP_SECRET`       | Facebook Pages ([Meta apps](meta-apps.md))                    |
 | `RESEND_API_KEY`, `NOTIFY_EMAIL`, `NOTIFY_FROM` | failure digests by email                                      |
 | `MEDIA_PUBLIC_BASE_URL`                         | serving Meta's crawler from a public media origin (see below) |
-| `ENABLE_VIDEO_UPLOAD`                           | LinkedIn video, wired but unverified                          |
+| `ENABLE_VIDEO_UPLOAD`                           | LinkedIn, Instagram and Facebook video, wired but unverified  |
 | `SUBREQUEST_LIMIT`                              | publishing more per tick on a paid Workers plan (see below)   |
 
 The OAuth client ids and secrets can also be entered in the accounts dialog instead, where they are stored in D1, encrypted with `APP_ENCRYPTION_KEY`; a Worker secret, when set, takes precedence over the dialog's value ([OAuth apps](oauth-apps.md)).

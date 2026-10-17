@@ -47,12 +47,14 @@ export interface OAuthCallbackOptions {
 	 * was kept still match on the handle.
 	 */
 	accountIdKey?: string;
+	/** Several accounts from one consent (Facebook: every Page picked in the
+	 *  dialog) come back as a list, and each gets its own row. */
 	complete(input: {
 		pending: PendingRow;
 		code: string;
 		db: AppDb;
 		env: AppEnv;
-	}): Promise<CallbackExchange>;
+	}): Promise<CallbackExchange | CallbackExchange[]>;
 }
 
 /**
@@ -71,12 +73,60 @@ export function findExistingConnection<
 	return candidates.find((c) => (c.handle ?? '') === handle);
 }
 
+async function upsertConnection(
+	db: AppDb,
+	env: AppEnv,
+	userId: string,
+	opts: OAuthCallbackOptions,
+	exchanged: CallbackExchange
+): Promise<void> {
+	const encrypted = await encryptJson(exchanged.credentials, env.APP_ENCRYPTION_KEY);
+	const now = new Date();
+	const data = {
+		displayName: exchanged.displayName || exchanged.handle || null,
+		handle: exchanged.handle || null,
+		avatarUrl: exchanged.avatarUrl || null,
+		...(exchanged.instanceUrl !== undefined ? { instanceUrl: exchanged.instanceUrl } : {}),
+		credentialsEncrypted: encrypted,
+		metaJson: JSON.stringify(exchanged.meta),
+		status: 'active' as const,
+		updatedAt: now
+	};
+	const candidates = await db
+		.select()
+		.from(connections)
+		.where(
+			and(
+				eq(connections.userId, userId),
+				eq(connections.platform, opts.platform),
+				...(opts.matchInstanceUrl ? [eq(connections.instanceUrl, exchanged.instanceUrl || '')] : [])
+			)
+		);
+	const existing = findExistingConnection(
+		candidates,
+		exchanged.handle || '',
+		opts.accountIdKey ? exchanged.meta[opts.accountIdKey] : undefined,
+		opts.accountIdKey
+	);
+	if (existing) {
+		await db.update(connections).set(data).where(eq(connections.id, existing.id));
+	} else {
+		await db.insert(connections).values({
+			id: newId(),
+			userId,
+			platform: opts.platform,
+			...data,
+			createdAt: now
+		});
+	}
+}
+
 /**
- * The four connect flows share everything but the token exchange and the
+ * The connect flows share everything but the token exchange and the
  * credential payload: parameter handling and error redirects, CSRF state
  * verification against the pending row, the upsert that keeps one connection
  * per account, and the pending-row cleanup. Keeping that in one place means a
- * fix to the state check cannot land in three of four routes.
+ * fix to the state check cannot land in only some of the routes.
  */
 export function createOAuthCallback(opts: OAuthCallbackOptions): RequestHandler {
 	return async ({ url, locals, cookies }) => {
@@ -113,47 +163,11 @@ export function createOAuthCallback(opts: OAuthCallbackOptions): RequestHandler 
 		}
 
 		try {
-			const exchanged = await opts.complete({ pending, code, db: locals.db, env: locals.env });
-			const encrypted = await encryptJson(exchanged.credentials, locals.env.APP_ENCRYPTION_KEY);
-			const now = new Date();
-			const data = {
-				displayName: exchanged.displayName || exchanged.handle || null,
-				handle: exchanged.handle || null,
-				avatarUrl: exchanged.avatarUrl || null,
-				...(exchanged.instanceUrl !== undefined ? { instanceUrl: exchanged.instanceUrl } : {}),
-				credentialsEncrypted: encrypted,
-				metaJson: JSON.stringify(exchanged.meta),
-				status: 'active' as const,
-				updatedAt: now
-			};
-			const candidates = await locals.db
-				.select()
-				.from(connections)
-				.where(
-					and(
-						eq(connections.userId, pending.userId),
-						eq(connections.platform, opts.platform),
-						...(opts.matchInstanceUrl
-							? [eq(connections.instanceUrl, exchanged.instanceUrl || '')]
-							: [])
-					)
-				);
-			const existing = findExistingConnection(
-				candidates,
-				exchanged.handle || '',
-				opts.accountIdKey ? exchanged.meta[opts.accountIdKey] : undefined,
-				opts.accountIdKey
-			);
-			if (existing) {
-				await locals.db.update(connections).set(data).where(eq(connections.id, existing.id));
-			} else {
-				await locals.db.insert(connections).values({
-					id: newId(),
-					userId: pending.userId,
-					platform: opts.platform,
-					...data,
-					createdAt: now
-				});
+			const result = await opts.complete({ pending, code, db: locals.db, env: locals.env });
+			const accounts = Array.isArray(result) ? result : [result];
+			if (!accounts.length) throw new Error('No accounts to connect');
+			for (const exchanged of accounts) {
+				await upsertConnection(locals.db, locals.env, pending.userId, opts, exchanged);
 			}
 			await locals.db.delete(oauthPending).where(eq(oauthPending.id, pending.id));
 			redirect(302, `${appUrl}/accounts?connected=${opts.platform}`, toAppOrigin(appUrl));

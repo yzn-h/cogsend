@@ -35,6 +35,10 @@ const envSchema = z.object({
 	THREADS_APP_SECRET: z.string().min(1).optional(),
 	X_CLIENT_ID: z.string().min(1).optional(),
 	X_CLIENT_SECRET: z.string().min(1).optional(),
+	INSTAGRAM_APP_ID: z.string().min(1).optional(),
+	INSTAGRAM_APP_SECRET: z.string().min(1).optional(),
+	FACEBOOK_APP_ID: z.string().min(1).optional(),
+	FACEBOOK_APP_SECRET: z.string().min(1).optional(),
 	// Failure-digest email (Resend). All optional: when unset, the digest is
 	// a no-op and failures only surface on the dashboard/posts tabs.
 	RESEND_API_KEY: z.string().min(1).optional(),
@@ -165,6 +169,11 @@ export async function envFromPlatform(
 		THREADS_APP_SECRET: asString(platformEnv?.THREADS_APP_SECRET) ?? fallback.THREADS_APP_SECRET,
 		X_CLIENT_ID: asString(platformEnv?.X_CLIENT_ID) ?? fallback.X_CLIENT_ID,
 		X_CLIENT_SECRET: asString(platformEnv?.X_CLIENT_SECRET) ?? fallback.X_CLIENT_SECRET,
+		INSTAGRAM_APP_ID: asString(platformEnv?.INSTAGRAM_APP_ID) ?? fallback.INSTAGRAM_APP_ID,
+		INSTAGRAM_APP_SECRET:
+			asString(platformEnv?.INSTAGRAM_APP_SECRET) ?? fallback.INSTAGRAM_APP_SECRET,
+		FACEBOOK_APP_ID: asString(platformEnv?.FACEBOOK_APP_ID) ?? fallback.FACEBOOK_APP_ID,
+		FACEBOOK_APP_SECRET: asString(platformEnv?.FACEBOOK_APP_SECRET) ?? fallback.FACEBOOK_APP_SECRET,
 		RESEND_API_KEY: asString(platformEnv?.RESEND_API_KEY) ?? fallback.RESEND_API_KEY,
 		NOTIFY_EMAIL: asString(platformEnv?.NOTIFY_EMAIL) ?? fallback.NOTIFY_EMAIL,
 		NOTIFY_FROM: asString(platformEnv?.NOTIFY_FROM) ?? fallback.NOTIFY_FROM,

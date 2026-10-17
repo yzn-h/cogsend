@@ -1,7 +1,7 @@
 # OAuth apps and platform limits
 
-Mastodon and Bluesky connect with what you already have. LinkedIn, Threads and X
-need an app registered at the provider first, because they issue the client id
+Mastodon and Bluesky connect with what you already have. LinkedIn, Threads,
+Instagram, Facebook and X need an app registered at the provider first, because they issue the client id
 and secret the Worker uses. If you would rather not register apps, the optional
 [Zernio provider](zernio.md) publishes to those platforms through Zernio's own.
 
@@ -9,11 +9,13 @@ and secret the Worker uses. If you would rather not register apps, the optional
 
 Each one is the same three steps: create the app, add the redirect URI, give CogSend the app's credentials. The accounts dialog walks through all three: pick a platform marked **Needs setup** and it shows this instance's exact redirect URI and a form for the credentials.
 
-| Platform | Where                                                                 | Redirect URI                                  | Worker secrets                                 |
-| -------- | --------------------------------------------------------------------- | --------------------------------------------- | ---------------------------------------------- |
-| LinkedIn | [LinkedIn Developer Portal](https://www.linkedin.com/developers/apps) | `{APP_URL}/api/connections/linkedin/callback` | `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET` |
-| Threads  | [Meta for Developers](https://developers.facebook.com/apps/)          | `{APP_URL}/api/connections/threads/callback`  | `THREADS_APP_ID`, `THREADS_APP_SECRET`         |
-| X        | [X Developer Portal](https://developer.x.com/en/portal/dashboard)     | `{APP_URL}/api/connections/x/callback`        | `X_CLIENT_ID`, `X_CLIENT_SECRET`               |
+| Platform  | Where                                                                 | Redirect URI                                   | Worker secrets                                 |
+| --------- | --------------------------------------------------------------------- | ---------------------------------------------- | ---------------------------------------------- |
+| LinkedIn  | [LinkedIn Developer Portal](https://www.linkedin.com/developers/apps) | `{APP_URL}/api/connections/linkedin/callback`  | `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET` |
+| Threads   | [Meta for Developers](https://developers.facebook.com/apps/)          | `{APP_URL}/api/connections/threads/callback`   | `THREADS_APP_ID`, `THREADS_APP_SECRET`         |
+| X         | [X Developer Portal](https://developer.x.com/en/portal/dashboard)     | `{APP_URL}/api/connections/x/callback`         | `X_CLIENT_ID`, `X_CLIENT_SECRET`               |
+| Instagram | [Meta for Developers](https://developers.facebook.com/apps/)          | `{APP_URL}/api/connections/instagram/callback` | `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET`     |
+| Facebook  | [Meta for Developers](https://developers.facebook.com/apps/)          | `{APP_URL}/api/connections/facebook/callback`  | `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET`       |
 
 The last step works three ways:
 
@@ -87,27 +89,57 @@ shows as expired, and **Reconnect** on the Accounts page starts a new 60 days.
 Posting on X uses pay-per-use API credits — fund a small balance in the console
 first.
 
+### Instagram
+
+Publishes to Instagram Business and Creator accounts through the Instagram API with Instagram Login (`instagram_business_basic`, `instagram_business_content_publish`); a personal account has to be switched to a professional one in the Instagram app first. The full walkthrough, including Development mode, is in [Meta apps for Instagram and Facebook](meta-apps.md#instagram).
+
+1. Create a Meta app with the **Manage messaging & content on Instagram** use case.
+2. Under **API setup with Instagram login**, copy the **Instagram app ID** and **Instagram app secret** (not the Meta app's own ID), and add the redirect URI under **Set up Instagram business login → Business login settings → OAuth redirect URIs**.
+3. While the app is in development, add the account as an **Instagram tester** and accept the invite in Instagram.
+4. Set the secrets:
+
+   ```sh
+   npm run secrets:put INSTAGRAM_APP_ID INSTAGRAM_APP_SECRET
+   ```
+
+### Facebook
+
+Publishes to Facebook Pages you manage (`pages_show_list`, `pages_read_engagement`, `pages_manage_posts`). Every Page you pick in Facebook's dialog becomes its own account in CogSend. The full walkthrough is in [Meta apps for Instagram and Facebook](meta-apps.md#facebook).
+
+1. Create a Meta app with the **Manage everything on your Page** use case.
+2. Add the redirect URI under the use case's Facebook Login **Settings → Valid OAuth Redirect URIs**, and copy the app ID and secret from **App settings → Basic**.
+3. While the app is in development, give everyone who connects a role on the app. Posts a Development-mode app makes are visible only to people with a role on the app, so read [Development mode](meta-apps.md#development-mode) before you rely on it for public posts.
+4. Set the secrets:
+
+   ```sh
+   npm run secrets:put FACEBOOK_APP_ID FACEBOOK_APP_SECRET
+   ```
+
 Moving your instance to another hostname means registering these redirect URIs
 again; see [Domains and URLs](domains.md).
 
-Without these, those three platforms are listed in the accounts dialog with a
+Without these, those platforms are listed in the accounts dialog with a
 **Needs setup** badge. Picking one shows that platform's own steps — the redirect
 URI to register and the Worker secrets to set — instead of a connect attempt that
 cannot succeed. Mastodon and Bluesky keep working either way.
 
 ## Platforms
 
-| Platform | Auth                                                                     | Text                       | Images                                 | Threads                      |
-| -------- | ------------------------------------------------------------------------ | -------------------------- | -------------------------------------- | ---------------------------- |
-| Mastodon | OAuth (per instance)                                                     | instance max (default 500) | 4, 16MB                                | yes                          |
-| Bluesky  | handle + app password                                                    | 300                        | 4, 2MB                                 | yes                          |
-| LinkedIn | OAuth (`openid profile email w_member_social`)                           | 3000                       | 4, 8MB (no WebP)                       | no — flattened into one post |
-| Threads  | OAuth (`threads_basic threads_content_publish` `threads_manage_replies`) | 500, max 5 links           | 4 uploadable, 10 allowed, 8MB JPEG/PNG | yes                          |
-| X        | OAuth 2.0 + PKCE                                                         | 280, max 1 cashtag         | 4, 5MB (15MB GIF)                      | yes                          |
+| Platform  | Auth                                                                              | Text                       | Images                                    | Threads                      |
+| --------- | --------------------------------------------------------------------------------- | -------------------------- | ----------------------------------------- | ---------------------------- |
+| Mastodon  | OAuth (per instance)                                                              | instance max (default 500) | 4, 16MB                                   | yes                          |
+| Bluesky   | handle + app password                                                             | 300                        | 4, 2MB                                    | yes                          |
+| LinkedIn  | OAuth (`openid profile email w_member_social`)                                    | 3000                       | 4, 8MB (no WebP)                          | no — flattened into one post |
+| Threads   | OAuth (`threads_basic threads_content_publish` `threads_manage_replies`)          | 500, max 5 links           | 4 uploadable, 10 allowed, 8MB JPEG/PNG    | yes                          |
+| X         | OAuth 2.0 + PKCE                                                                  | 280, max 1 cashtag         | 4, 5MB (15MB GIF)                         | yes                          |
+| Instagram | Instagram Login (`instagram_business_basic` `instagram_business_content_publish`) | 2200, max 30 hashtags      | 10 per carousel, 8MB JPEG only; MP4 Reels | no — flattened into one post |
+| Facebook  | Facebook Login (`pages_show_list` `pages_read_engagement` `pages_manage_posts`)   | 63206                      | 10, 4MB JPEG/PNG/GIF; or one MP4          | no — flattened into one post |
 
 LinkedIn rejects WebP at publish time — upload JPEG, PNG or GIF.
 
-Threads images are served to Meta through short-lived signed URLs (2h expiry,
+Instagram needs at least one image or video: a text-only post is refused. Like LinkedIn, a thread is flattened into one post, so its attachments together form the carousel; the composer still takes four images per card, so a carousel longer than four spans several cards.
+
+Threads, Instagram and Facebook media is served to Meta through short-lived signed URLs (2h expiry,
 never linked publicly). Meta's crawler intermittently fails to fetch a URL that
 works moments later (subcode 2207052), so media containers retry with a freshly
 signed URL and the failure stays retryable. A custom public media origin can be
@@ -118,7 +150,10 @@ the object key, so keep the origin unlisted and treat a leaked URL as permanent.
 Remove the variable to go back to signed URLs.
 
 Video is off unless you set `ENABLE_VIDEO_UPLOAD=1` as a Worker secret or var.
-LinkedIn takes one MP4 per post, with no images mixed in. The upload path is
-wired but has not been verified end to end against LinkedIn's live API, which is
-why it ships disabled — the file picker hides video until it is on, and the API
+LinkedIn and Facebook take one MP4 per post, with no images mixed in. Instagram
+publishes a lone MP4 as a Reel, and a video in a carousel as one of its items;
+Instagram processes video before it can be published, and a Reel still processing
+after about 30 seconds is retried on the next scheduler tick against the same
+upload rather than a new one. The upload paths are wired but have not been
+verified end to end against the live APIs, which is why video ships disabled — the file picker hides video until it is on, and the API
 refuses video files.

@@ -40,17 +40,23 @@ export function humanizedCause(raw: string | null | undefined): string | null {
 		return 'The platform refused this post (permissions or policy)';
 	}
 	// Meta permission failures are HTTP 400s, so the 401/403 branches never
-	// match. Scoped to Threads wording (provider prefixes every message).
+	// match. Every Meta provider prefixes its messages with the platform name,
+	// which is how the copy names the right one.
+	const meta = metaPlatform(s);
 	if (isThreadsAuthFailure(s)) {
-		return 'Threads refused with a permissions error — reconnect the account and retry';
+		return `${meta} refused with a permissions error — reconnect the account and retry`;
 	}
 	// Meta could not download the image (its crawler is intermittent — the
 	// same file has posted seconds later), so point at Retry, not at setup.
 	if (isThreadsMediaFetchFailure(s)) {
-		return 'Threads could not download the image — retry to publish it';
+		const what = meta === 'Threads' ? 'image' : 'media';
+		return `${meta} could not download the ${what} — retry to publish it`;
 	}
-	if (/threads (container|publish) failed \(4(?!29)\d/.test(s)) {
-		return 'Threads could not create this post — check the post and the app setup, then retry';
+	if (
+		/(threads|instagram) (container|publish) failed \(4(?!29)\d/.test(s) ||
+		/facebook (photo|video|post) failed \(4(?!29)\d/.test(s)
+	) {
+		return `${meta} could not create this post — check the post and the app setup, then retry`;
 	}
 	if (s.includes('429') || s.includes('rate limit')) {
 		return 'Rate limited — try again in a minute';
@@ -80,6 +86,12 @@ export function humanizedCause(raw: string | null | undefined): string | null {
 		return 'That instance URL isn’t allowed';
 	}
 	return null;
+}
+
+function metaPlatform(lower: string): string {
+	if (lower.includes('instagram')) return 'Instagram';
+	if (lower.includes('facebook')) return 'Facebook';
+	return 'Threads';
 }
 
 export function humanizeError(raw: string | null | undefined): string {

@@ -4,6 +4,8 @@ import { newId, type AppDb } from '#lib/server/db/client.js';
 import { oauthPending, users } from '#lib/server/db/schema.js';
 import { createTestDb, TEST_ENV } from '#lib/server/db/test.js';
 import { GET as connectionsGET } from '../src/routes/api/connections/+server';
+import { POST as facebookPOST } from '../src/routes/api/connections/facebook/+server';
+import { POST as instagramPOST } from '../src/routes/api/connections/instagram/+server';
 import { POST as linkedinPOST } from '../src/routes/api/connections/linkedin/+server';
 import { POST as mastodonPOST } from '../src/routes/api/connections/mastodon/+server';
 import { POST as threadsPOST } from '../src/routes/api/connections/threads/+server';
@@ -13,7 +15,7 @@ import { PLATFORM_SECRET_NAMES, PLATFORM_SETUP } from '#lib/domain/platform-setu
 import { OAUTH_PENDING_TTL_MS } from '#lib/domain/oauth-pending.js';
 
 /**
- * The four connect entry points. They were untested: a regression here (a
+ * The connect entry points. They were untested: a regression here (a
  * dropped state binding, a wrong pending marker, a leaked authorize URL shape)
  * only surfaced when someone tried to connect a real account.
  */
@@ -30,7 +32,11 @@ describe('connect routes', () => {
 		X_CLIENT_ID: 'x-client',
 		X_CLIENT_SECRET: 'x-secret',
 		LINKEDIN_CLIENT_ID: 'li-client',
-		LINKEDIN_CLIENT_SECRET: 'li-secret'
+		LINKEDIN_CLIENT_SECRET: 'li-secret',
+		INSTAGRAM_APP_ID: 'ig-app',
+		INSTAGRAM_APP_SECRET: 'ig-secret',
+		FACEBOOK_APP_ID: 'fb-app',
+		FACEBOOK_APP_SECRET: 'fb-secret'
 	};
 
 	const locals = (overrides: Record<string, unknown> = {}) => ({
@@ -97,7 +103,9 @@ describe('connect routes', () => {
 		for (const [handler, platform, secrets] of [
 			[threadsPOST, 'threads', ['THREADS_APP_ID', 'THREADS_APP_SECRET']],
 			[xPOST, 'x', ['X_CLIENT_ID']],
-			[linkedinPOST, 'linkedin', ['LINKEDIN_CLIENT_ID', 'LINKEDIN_CLIENT_SECRET']]
+			[linkedinPOST, 'linkedin', ['LINKEDIN_CLIENT_ID', 'LINKEDIN_CLIENT_SECRET']],
+			[instagramPOST, 'instagram', ['INSTAGRAM_APP_ID', 'INSTAGRAM_APP_SECRET']],
+			[facebookPOST, 'facebook', ['FACEBOOK_APP_ID', 'FACEBOOK_APP_SECRET']]
 		] as const) {
 			const res = await call(handler, undefined, { env: { ...TEST_ENV } });
 			expect(res.status).toBe(409);
@@ -129,7 +137,9 @@ describe('connect routes', () => {
 		for (const [handler, platform] of [
 			[threadsPOST, 'threads'],
 			[xPOST, 'x'],
-			[linkedinPOST, 'linkedin']
+			[linkedinPOST, 'linkedin'],
+			[instagramPOST, 'instagram'],
+			[facebookPOST, 'facebook']
 		] as const) {
 			const setup = PLATFORM_SETUP[platform];
 			const complete: Record<string, unknown> = { ...env };
@@ -168,7 +178,13 @@ describe('connect routes', () => {
 			secrets: Record<string, boolean>;
 			appUrl?: string;
 		};
-		expect(body.configured).toEqual({ linkedin: true, threads: true, x: true });
+		expect(body.configured).toEqual({
+			linkedin: true,
+			threads: true,
+			x: true,
+			instagram: true,
+			facebook: true
+		});
 		expect(body.appUrl).toBe('https://cogsend.example.com/');
 		// Presence per secret, not just per platform: this is what lets the
 		// dialog name the missing half instead of repeating "no credentials".
@@ -188,7 +204,9 @@ describe('connect routes', () => {
 		expect(bareBody.configured).toEqual({
 			linkedin: false,
 			threads: false,
-			x: false
+			x: false,
+			instagram: false,
+			facebook: false
 		});
 		expect(Object.values(bareBody.secrets).some(Boolean)).toBe(false);
 		// Half uploaded: the state that used to be indistinguishable from
@@ -229,10 +247,12 @@ describe('connect routes', () => {
 		expect(row.clientSecretEnc).not.toContain('x-secret');
 	});
 
-	it('returns Threads and LinkedIn authorize URLs with a bound state', async () => {
+	it('returns Threads, LinkedIn, Instagram and Facebook authorize URLs with a bound state', async () => {
 		for (const [handler, marker, client] of [
 			[threadsPOST, 'threads', 'threads-app'],
-			[linkedinPOST, 'linkedin', 'li-client']
+			[linkedinPOST, 'linkedin', 'li-client'],
+			[instagramPOST, 'instagram', 'ig-app'],
+			[facebookPOST, 'facebook', 'fb-app']
 		] as const) {
 			const res = await call(handler);
 			expect(res.status).toBe(200);

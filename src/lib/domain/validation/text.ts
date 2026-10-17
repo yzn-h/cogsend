@@ -103,6 +103,39 @@ export function validateThreadsText(
 	return { ok: true, length, max: maxChars };
 }
 
+export const INSTAGRAM_MAX_CHARS = 2200;
+export const INSTAGRAM_MAX_HASHTAGS = 30;
+// Facebook's documented cap for a Page post's message.
+export const FACEBOOK_MAX_CHARS = 63206;
+
+export function validateInstagramText(
+	text: string,
+	maxChars = INSTAGRAM_MAX_CHARS
+): { ok: boolean; length: number; max: number; message?: string } {
+	const length = countGraphemes(text);
+	if (length > maxChars) return tooLong(length, maxChars, 'Instagram max 2200');
+	// Instagram refuses the whole caption, not just the extra tags.
+	const hashtags = text.match(/(^|\s)#[^\s#]+/g)?.length ?? 0;
+	if (hashtags > INSTAGRAM_MAX_HASHTAGS) {
+		return {
+			ok: false,
+			length,
+			max: maxChars,
+			message: `Instagram allows max ${INSTAGRAM_MAX_HASHTAGS} hashtags (${hashtags} used)`
+		};
+	}
+	return { ok: true, length, max: maxChars };
+}
+
+export function validateFacebookText(
+	text: string,
+	maxChars = FACEBOOK_MAX_CHARS
+): { ok: boolean; length: number; max: number; message?: string } {
+	const length = countGraphemes(text);
+	if (length > maxChars) return tooLong(length, maxChars, 'Facebook max 63206');
+	return { ok: true, length, max: maxChars };
+}
+
 /** What X counts a link as, however long it is (it is wrapped in t.co). */
 export const X_URL_WEIGHT = 23;
 

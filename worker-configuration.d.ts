@@ -83,11 +83,15 @@ interface Env {
 	THREADS_APP_SECRET?: string;
 	X_CLIENT_ID?: string;
 	X_CLIENT_SECRET?: string;
+	INSTAGRAM_APP_ID?: string;
+	INSTAGRAM_APP_SECRET?: string;
+	FACEBOOK_APP_ID?: string;
+	FACEBOOK_APP_SECRET?: string;
 	/** Local-dev only: skips 2FA. Honored only while the resolved URL is a
 	 *  localhost one, so it cannot weaken a real deployment. */
 	SKIP_TOTP?: string;
-	/** Set to "1" to enable video uploads (LinkedIn). The path is wired but not
-	 *  verified against the live API yet, so it is off by default: the editor
+	/** Set to "1" to enable video uploads (LinkedIn, Instagram, Facebook). The
+	 *  paths are wired but not verified against the live APIs yet, so it is off by default: the editor
 	 *  hides the affordance and the API refuses video files without it. */
 	ENABLE_VIDEO_UPLOAD?: string;
 }
