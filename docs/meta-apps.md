@@ -29,7 +29,7 @@ Only **Business** and **Creator** accounts can publish through the API. Switch a
 
 The token Instagram issues lasts 60 days, and CogSend renews it whenever it is within a week of expiring and something publishes or you press **Verify**. An account that publishes nothing for two months has to be reconnected.
 
-What publishes: one JPEG becomes a photo post, one MP4 becomes a Reel, and two to ten items become a carousel, which may mix photos and videos. Instagram accepts JPEG only, so convert PNG and WebP first. Captions take up to 2,200 characters and 30 hashtags. Instagram allows 100 API posts per account in 24 hours.
+What publishes: one JPEG becomes a photo post, one video becomes a Reel (the composer converts it to an H.264 MP4 first when it needs to, see [Video in the browser](oauth-apps.md#video-in-the-browser)), and two to ten items become a carousel, which may mix photos and videos. Instagram accepts JPEG only, so convert PNG and WebP first. Captions take up to 2,200 characters and 30 hashtags. Instagram allows 100 API posts per account in 24 hours.
 
 ## Facebook
 

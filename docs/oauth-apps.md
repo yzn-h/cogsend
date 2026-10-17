@@ -157,3 +157,11 @@ after about 30 seconds is retried on the next scheduler tick against the same
 upload rather than a new one. The upload paths are wired but have not been
 verified end to end against the live APIs, which is why video ships disabled — the file picker hides video until it is on, and the API
 refuses video files.
+
+### Video in the browser
+
+The composer checks every video before it uploads it, in your browser, with [Mediabunny](https://mediabunny.dev/) over WebCodecs. MP4, MOV and WebM are accepted. A file every platform already takes (H.264 video, AAC audio, MP4, at most 1920 pixels on its long edge, 60 frames a second and 95MB) uploads as it is. Anything else is converted to that first, with a progress bar and a Cancel button under the post, so the stored file works on LinkedIn, Instagram and Facebook alike. The bitrate is chosen to land under 95MB; a video too long to fit at a watchable quality is refused with the length that would fit.
+
+What conversion cannot change, length and shape, is checked against the accounts selected at the time: a Reel under 3 seconds or over 15 minutes, or a LinkedIn video wider than 2.4:1, gets a warning before anything is published. The composer also shows a still from the video as its preview.
+
+Conversion needs a browser that can encode H.264 and AAC through WebCodecs: current Chrome and Edge can, and other browsers vary. Where it cannot, the composer says so and asks for an H.264 MP4 instead. Nothing is transcoded in the Worker, which has neither WebCodecs nor the CPU time for it.

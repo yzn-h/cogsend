@@ -43,6 +43,13 @@
 		remapSegmentIndexAfterRemoval
 	} from '#lib/domain/media-limits.js';
 	import { shrinkToFit } from '#lib/components/shrink-image.js';
+	import {
+		prepareVideo,
+		VIDEO_INPUT_MIMES,
+		VideoPrepError,
+		videoCover
+	} from '#lib/components/video-prep.js';
+	import { videoProblems } from '#lib/domain/video-specs.js';
 	import { persistMediaLayout, type MediaMove } from '#lib/domain/media-sync.js';
 	import {
 		customizePlatformBody,
@@ -146,6 +153,8 @@
 		altText: string | null;
 		segmentIndex?: number;
 		previewUrl?: string;
+		/** A still from the browser's copy, so the preview is not a black box. */
+		posterUrl?: string;
 	};
 
 	type ActiveTab = 'global' | PlatformId;
@@ -240,7 +249,7 @@
 	/** What the file picker accepts, and what a drop is filtered down to. */
 	const ACCEPTED_MEDIA = $derived(
 		videoEnabled
-			? 'image/png,image/jpeg,image/webp,image/gif,video/mp4'
+			? `image/png,image/jpeg,image/webp,image/gif,${VIDEO_INPUT_MIMES.join(',')}`
 			: 'image/png,image/jpeg,image/webp,image/gif'
 	);
 
@@ -310,6 +319,10 @@
 	let mastoPoll = $state<PollConfig | null>(seededPoll);
 	let focusedSegment = $state(0);
 	let uploadingSegment = $state<number | null>(null);
+	// The video being checked or converted before upload, for the progress row.
+	let videoPrep = $state<{ segment: number; name: string; progress: number | null } | null>(null);
+	let videoPrepAbort: AbortController | null = null;
+	const isVideoInput = (type: string) => VIDEO_INPUT_MIMES.includes(type);
 	let dirty = $state(false);
 	// URL id of a draft whose load is in flight. Autosave waits for it so a
 	// keystroke typed during a slow load cannot create a second draft.
@@ -2013,15 +2026,43 @@
 		}
 	}
 
+	/**
+	 * Checks a picked video and converts it in the browser when a platform
+	 * would refuse it as it is. Null when it cannot be used; the reason has
+	 * been shown.
+	 */
+	async function prepareForUpload(segmentIndex: number, file: File) {
+		videoPrepAbort = new AbortController();
+		videoPrep = { segment: segmentIndex, name: file.name, progress: null };
+		try {
+			return await prepareVideo(file, {
+				signal: videoPrepAbort.signal,
+				onProgress: (progress) => {
+					if (videoPrep) videoPrep = { ...videoPrep, progress };
+				}
+			});
+		} catch (e) {
+			const message =
+				e instanceof VideoPrepError
+					? e.message
+					: `Could not read ${file.name} — export it as H.264 MP4 and try again`;
+			showToast(message, 'error');
+			return null;
+		} finally {
+			videoPrep = null;
+			videoPrepAbort = null;
+		}
+	}
+
 	async function attachFilesToSegment(segmentIndex: number, files: File[]) {
 		if (editLocked) return;
 		const picked = files.filter(
-			(f) => f.type.startsWith('image/') || (videoEnabled && f.type === 'video/mp4')
+			(f) => f.type.startsWith('image/') || (videoEnabled && isVideoInput(f.type))
 		);
 		if (!picked.length) {
 			showToast(
 				videoEnabled
-					? 'Only image files (PNG, JPEG, WebP, GIF) and MP4 video are supported'
+					? 'Only image files (PNG, JPEG, WebP, GIF) and MP4, MOV or WebM video are supported'
 					: 'Only image files (PNG, JPEG, WebP, GIF) are supported',
 				'warn'
 			);
@@ -2031,7 +2072,27 @@
 		// the file is stored once and may be published anywhere later.
 		uploadingSegment = segmentIndex;
 		const images: File[] = [];
-		for (const f of picked) images.push(await shrinkToFit(f, BLUESKY_MAX_IMAGE_BYTES));
+		const posters = new Map<File, string>();
+		const videoAdvisories: string[] = [];
+		for (const f of picked) {
+			if (!isVideoInput(f.type)) {
+				images.push(await shrinkToFit(f, BLUESKY_MAX_IMAGE_BYTES));
+				continue;
+			}
+			const prepared = await prepareForUpload(segmentIndex, f);
+			if (!prepared) continue;
+			images.push(prepared.file);
+			const selectedPlatforms = connections
+				.filter((c) => selected.has(c.id))
+				.map((c) => c.platform);
+			videoAdvisories.push(...videoProblems(prepared.facts, selectedPlatforms));
+			const poster = await videoCover(prepared.file);
+			if (poster) posters.set(prepared.file, poster);
+		}
+		if (!images.length) {
+			uploadingSegment = null;
+			return;
+		}
 		const blueskySelected = connections.some((c) => selected.has(c.id) && c.platform === 'bluesky');
 		const linkedinSelected = connections.some(
 			(c) => selected.has(c.id) && c.platform === 'linkedin'
@@ -2051,7 +2112,7 @@
 		const webpSelected = images.some((f) => f.type === 'image/webp') && linkedinSelected;
 		const overBluesky = images.filter((f) => f.size > BLUESKY_MAX_IMAGE_BYTES);
 		const overLinkedin = images.filter((f) => f.size > LINKEDIN_MAX_IMAGE_BYTES);
-		const advisories: string[] = [];
+		const advisories: string[] = [...videoAdvisories];
 		if (videos.length && nonVideoSelected) {
 			advisories.push(
 				'Video posts only go to LinkedIn, Instagram and Facebook — other selected accounts will fail unless you uncheck them.'
@@ -2137,9 +2198,17 @@
 			// Left for another post mid-upload: the images belong to the one
 			// they were sent with, which keeps them.
 			if (generation !== editorGeneration) return;
+			// The route answers in the order the files were sent.
 			media = [
 				...media,
-				...items.map((it) => ({ ...it, segmentIndex: it.segmentIndex ?? segmentIndex }))
+				...items.map((it, i) => {
+					const poster = images[i] ? posters.get(images[i]) : undefined;
+					return {
+						...it,
+						segmentIndex: it.segmentIndex ?? segmentIndex,
+						...(poster ? { posterUrl: poster } : {})
+					};
+				})
 			];
 			showToast(
 				items.length === 1 ? 'Image attached' : `${items.length} images attached`,
@@ -2649,7 +2718,7 @@
 		const files: File[] = [];
 		for (let i = 0; i < data.items.length; i++) {
 			const item = data.items[i];
-			if (item.kind === 'file' && (item.type.startsWith('image/') || item.type === 'video/mp4')) {
+			if (item.kind === 'file' && (item.type.startsWith('image/') || isVideoInput(item.type))) {
 				const f = item.getAsFile();
 				if (f) files.push(f);
 			}
@@ -2668,7 +2737,7 @@
 		if (editLocked) return;
 		if (e.dataTransfer?.files?.length) {
 			const files = Array.from(e.dataTransfer.files).filter(
-				(f) => f.type.startsWith('image/') || f.type === 'video/mp4'
+				(f) => f.type.startsWith('image/') || isVideoInput(f.type)
 			);
 			if (files.length) void attachFilesToSegment(index, files);
 		}
@@ -3363,6 +3432,7 @@
 											<!-- svelte-ignore a11y_media_has_caption -->
 											<video
 												src={m.previewUrl || `/api/media/${encodeURIComponent(m.storageKey)}`}
+												poster={m.posterUrl}
 												controls
 												preload="none"
 												width="80"
@@ -3422,6 +3492,35 @@
 										{/if}
 									</div>
 								{/each}
+							</div>
+						{/if}
+
+						{#if videoPrep && videoPrep.segment === index}
+							<div
+								class="mt-3 flex items-center gap-3 rounded-xl border border-stone-200/80 bg-white px-3 py-2"
+								role="status"
+								data-testid="video-prep-{index}"
+							>
+								<div class="min-w-0 flex-1">
+									<p class="truncate text-xs font-bold text-stone-700">
+										{videoPrep.progress === null
+											? `Checking ${videoPrep.name}…`
+											: `Converting ${videoPrep.name} to MP4 — ${Math.round(videoPrep.progress * 100)}%`}
+									</p>
+									{#if videoPrep.progress !== null}
+										<div class="mt-1.5 h-1 overflow-hidden rounded-full bg-stone-100">
+											<div
+												class="h-full rounded-full bg-stone-900 transition-[width]"
+												style="width: {Math.round(videoPrep.progress * 100)}%"
+											></div>
+										</div>
+									{/if}
+								</div>
+								<button
+									type="button"
+									class="text-xs font-bold text-stone-600 underline hover:text-stone-900"
+									onclick={() => videoPrepAbort?.abort()}>Cancel</button
+								>
 							</div>
 						{/if}
 

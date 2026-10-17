@@ -15,6 +15,7 @@ Bundled into the Worker
 Apache-2.0             1 package
 ISC                    1 package
 MIT                    12 packages
+MPL-2.0                1 package
 
 - @lucide/svelte 1.45.0 — ISC — https://github.com/lucide-icons/lucide
 - @modelcontextprotocol/core 2.0.0 — MIT — https://github.com/modelcontextprotocol/typescript-sdk
@@ -25,6 +26,7 @@ MIT                    12 packages
 - date-fns 4.4.0 — MIT — https://github.com/date-fns/date-fns
 - devalue 5.9.4 — MIT — https://github.com/sveltejs/devalue
 - drizzle-orm 0.45.2 — Apache-2.0 — https://github.com/drizzle-team/drizzle-orm
+- mediabunny 1.61.3 — MPL-2.0 — https://github.com/Vanilagy/mediabunny
 - esm-env 1.2.2 — MIT — https://github.com/benmccann/esm-env
 - set-cookie-parser 3.1.2 — MIT — https://github.com/nfriedly/set-cookie-parser
 - svelte 5.57.0 — MIT — https://github.com/sveltejs/svelte
@@ -65,7 +67,14 @@ Notes
 -----
 
 - Every package above is permissively licensed (MIT, Apache-2.0, ISC, or
-  MIT OR Apache-2.0). The build-only tree does pull in two weak-copyleft
+  MIT OR Apache-2.0) except `mediabunny`, which is MPL-2.0. It reads and
+  converts video in the browser (WebCodecs) so the platforms get an H.264/AAC
+  MP4 without a server-side ffmpeg; the Worker never runs it, and it ships
+  only in the composer's client assets, loaded on first video upload. MPL-2.0
+  is file-level copyleft: CogSend uses the files unmodified, and their source
+  is the published package and the repository linked above. A change to a
+  Mediabunny file itself would have to be published under MPL-2.0. The
+  build-only tree does pull in two weak-copyleft
   packages:
   `lightningcss` (MPL-2.0, via Tailwind/Vite) and `sharp`/libvips
   (LGPL-3.0-or-later, via wrangler's local runtime). Neither is part of the
